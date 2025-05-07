@@ -83,6 +83,11 @@ function addTag(tag) {
 function renderCustomTag(tag, tagContainer) {
     const wrapper = document.createElement("div");
     wrapper.className = "tagCheckbox";
+    wrapper.style.position = "relative";
+    wrapper.style.display = "inline-flex";
+    wrapper.style.alignItems = "center";
+    wrapper.style.marginRight = "8px";
+    wrapper.style.marginBottom = "8px";
 
     const tagOption = document.createElement("input");
     tagOption.type = "checkbox";
@@ -91,28 +96,15 @@ function renderCustomTag(tag, tagContainer) {
 
     const label = document.createElement("label");
     label.textContent = ` ${tag}`;
-    label.prepend(tagOption);
-
-    const deleteBtn = document.createElement("button");
-    deleteBtn.textContent = "X";
-    deleteBtn.type = "button";
-    deleteBtn.style.fontSize = "0.6em";
-    deleteBtn.style.color = "#ff3d3d";
-    deleteBtn.style.backgroundColor = "#580202";
-    deleteBtn.style.border = "none";
-    deleteBtn.style.borderRadius = "50%";
-    deleteBtn.style.width = "1em";
-    deleteBtn.style.height = "1em";
-    deleteBtn.style.marginLeft = "4px";
-    deleteBtn.style.display = "flex";
-    deleteBtn.style.alignItems = "center";
-    deleteBtn.style.justifyContent = "center";
-    deleteBtn.style.cursor = "pointer";
-    deleteBtn.onclick = () => deleteTag(tag);
-    
+    label.prepend(tagOption);    
 
     wrapper.appendChild(label);
-    wrapper.appendChild(deleteBtn);
+
+    const deleteBtn = renderDeleteButton(tag, wrapper, 16); 
+    deleteBtn.style.position = "relative";
+    deleteBtn.style.padding = "0px";
+    deleteBtn.style.marginLeft = "8px";
+
     tagContainer.appendChild(wrapper);
 }
 
@@ -125,54 +117,195 @@ function renderCustomTags() {
     return customTags;
 }
 
+function renderStatusButton(task, taskContainer) {
+    const statusBtn = document.createElement("button");
+    statusBtn.style.background = "none";
+    statusBtn.style.border = "none";
+    statusBtn.style.cursor = "pointer";
+    statusBtn.style.width = "24px";
+    statusBtn.style.height = "24px";
+
+    const statusIcon = document.createElement("img");
+    statusIcon.style.width = "32px";
+    statusIcon.style.height = "32px";
+    statusIcon.src = task.status === "open" ? "./images/unchecked.svg" : "./images/checked.svg";
+
+    statusBtn.appendChild(statusIcon);
+
+    statusBtn.onclick = () => {
+        const newStatus = task.status === "open" ? "closed" : "open";
+        updateStatus(task.dateCreated, newStatus);
+        applyFiltersAndSort(); // re-renders all task cards
+    };
+
+    statusBtn.onmouseover = () => {
+        statusIcon.style.opacity = "0.5";
+    };
+    statusBtn.onmouseout = () => {
+        statusIcon.style.opacity = "1";
+    };
+
+    taskContainer.appendChild(statusBtn);
+    return statusBtn;
+}
+
+function renderDeleteButton(target, container, size = 20) {
+    const deleteBtn = document.createElement("button");
+    deleteBtn.style.background = "none";
+    deleteBtn.style.border = "none";
+    deleteBtn.style.cursor = "pointer";
+    deleteBtn.style.width = `${size}px`;
+    deleteBtn.style.height = `${size}px`;
+
+    const deleteIcon = document.createElement("img");
+    deleteIcon.src = "./images/delete.svg";
+    deleteIcon.style.width = "100%";
+    deleteIcon.style.height = "100%";
+    deleteIcon.style.opacity = "0.5";
+    deleteIcon.style.transition = "opacity .2s";
+    deleteIcon.onmouseover = () => deleteIcon.style.opacity = "1";
+    deleteIcon.onmouseout = () => deleteIcon.style.opacity = "0.5";
+
+    deleteBtn.appendChild(deleteIcon);
+
+    if (typeof target === "object" && target.dateCreated) {
+        deleteBtn.onclick = () => deleteTask(target.dateCreated);
+    } else {
+        deleteBtn.onclick = () => deleteTag(target);
+    }
+
+    container.appendChild(deleteBtn);
+    return deleteBtn;
+}
+
+
 function renderTask(task, taskDiv) {
-    const container = document.createElement("div"); // Create the main flex container
+    const container = document.createElement("div"); // Horizontal layout
     container.style.display = "flex";
+    container.style.flexWrap = "wrap";
+
+    // container.style.alignItems = "center"; // vertically center items
     container.style.fontSize = "large";
     container.style.gap = "16px";
-    container.style.flexWrap = "wrap";
-  
-    // Left section: main task info
+    container.style.lineHeight = "1.5"; // increased vertical spacing
+
+    // ----- STATUS ICON COLUMN -----
+    const statusColumn = document.createElement("div");
+    statusColumn.style.flex = "0 0 auto";
+    statusColumn.style.display = "flex";
+    // statusColumn.style.alignItems = "center";
+    statusColumn.style.marginTop = "4px";
+    statusColumn.style.paddingRight = "8px";
+    renderStatusButton(task, statusColumn); // icon goes here
+    container.appendChild(statusColumn);
+
+    // ----- MAIN INFO COLUMN -----
     const mainInfo = document.createElement("div");
     mainInfo.style.flex = "2";
-  
-    //adding the task details
-    const lines = [];
-    lines.push(`<strong>${task.title + '\n'}</strong>`);
-    if (task.dueDate) lines.push(`Due: ${customDateString(task.dueDate)}`);
-    lines.push(`Status: ${task.status === "open" ? "To Do" : "Done"}`);
-    if (task.tags.length > 0) lines.push(`Tags: ${task.tags.join(", ")}`);
-    mainInfo.innerHTML = lines.join("<br>");
     mainInfo.style.padding = "8px";
-  
-    // Right section: notes (if any)
-    if (task.notes) {
-      const notesBox = document.createElement("div");
-      notesBox.style.flex = "1";
-      notesBox.style.fontSize = "medium";
-      notesBox.style.backgroundColor = "#f9f9f9";
-      notesBox.style.padding = "8px";
-      notesBox.style.border = "1px solid #ccc";
-      notesBox.innerHTML = `${task.notes}`;
-      container.appendChild(notesBox);
-    }
-  
-    container.prepend(mainInfo); // Add left section first
+    mainInfo.style.lineHeight = "2"; // increased vertical spacing
 
-    taskDiv.style.position = "relative"; // allows absolute-positioned children
-    taskDiv.appendChild(container);
+    const titleEl = document.createElement("strong");
+    titleEl.style.lineHeight = "2"; // slightly increased vertical spacing
+    titleEl.textContent = task.title;
+    titleEl.style.marginBottom = "16px";
+    mainInfo.appendChild(titleEl);
 
-    if (task.priority) {
-        const priorityLabel = document.createElement("div");
-        priorityLabel.textContent = `Priority: ${task.priority}`;
-        priorityLabel.style.position = "absolute";
-        priorityLabel.style.bottom = "8px";
-        priorityLabel.style.right = "8px";
-        priorityLabel.style.fontSize = "0.9em";
-        priorityLabel.style.color = "#666";
-        taskDiv.appendChild(priorityLabel);
+    if (task.dueDate) {
+        const due = document.createElement("div");
+        due.textContent = `${customDateString(task.dueDate)}`;
+        mainInfo.appendChild(due);
     }
+
+    if (task.tags.length > 0) {
+        const tagsLine = document.createElement("div");
+        tagsLine.style.display = "flex";
+        tagsLine.style.flexWrap = "wrap";
+        tagsLine.style.alignItems = "flex-start";
+        tagsLine.style.gap = "8px";
+        tagsLine.style.maxWidth = "100%";
+        
+        task.tags.forEach(tag => {
+            const tagEl = document.createElement("span");
+            tagEl.textContent = tag;
+            tagEl.style.lineHeight = "1"; 
+            tagEl.style.display = "inline-flex";
+            tagEl.style.alignItems = "center";
+
+            if (checkOverdue(task.dueDate, new Date()) && task.status === "open") {
+                tagEl.style.backgroundColor = "#fec4c8"; // red for overdue
+                tagEl.style.border = "1px solid #f99a85";
+            } else {
+                tagEl.style.backgroundColor = (task.status === "open") ? "#fdf1c5" : "#d4ceb4";
+                tagEl.style.border = (task.status === "open") ? "1px solid #e5d8a8" : "1px solid #c4bb96";
+            }
+
+            tagEl.style.padding = "4px 8px";
+            tagEl.style.borderRadius = "4px";
+            tagEl.style.fontSize = "0.9em";
+            tagEl.style.whiteSpace = "nowrap";
+            tagEl.style.height = "fit-content";
+            tagsLine.appendChild(tagEl);
+        });
+    
+        mainInfo.appendChild(tagsLine);
+    }    
+
+    container.appendChild(mainInfo);
+
+    // ----- DELETE BUTTON -----
+    const deleteBtn = renderDeleteButton(task, taskDiv, 20);
+    deleteBtn.style.position = "absolute";
+    deleteBtn.style.top = "4px";
+    deleteBtn.style.right = "8px";
+    deleteBtn.style.padding = "0px";
+
+    // ----- RIGHT COLUMN: NOTES + PRIORITY -----
+    if (task.notes || task.priority) {
+        const rightColumn = document.createElement("div");
+        rightColumn.style.display = "flex";
+        rightColumn.style.flexDirection = "column";
+        rightColumn.style.flex = "1";
+        rightColumn.style.gap = "8px";
+        rightColumn.style.marginRight = "32px";
+
+        if (task.notes) {
+            const notesBox = document.createElement("div");
+            notesBox.style.fontSize = "medium";
+
+            if (checkOverdue(task.dueDate, new Date()) && task.status === "open") {
+                notesBox.style.backgroundColor = "#fde4df"; // red for overdue
+                notesBox.style.border = "1px solid #f98369";
+            } else {
+                notesBox.style.backgroundColor = (task.status === "open") ? "#fffdf6" : "#dedcd6";
+                notesBox.style.border = "1px solid #ccc";
+            }
+            notesBox.style.padding = "8px";
+            notesBox.style.borderRadius = "8px";
+            notesBox.textContent = task.notes;
+            rightColumn.appendChild(notesBox);
+        }
+
+        if (task.priority) {
+            const priorityLabel = document.createElement("div");
+            priorityLabel.textContent = `Priority: ${task.priority}`;
+            priorityLabel.style.fontSize = "0.9em";
+            priorityLabel.style.color = "#666";
+            priorityLabel.style.marginTop = "auto";
+            priorityLabel.style.marginLeft = "auto";
+            priorityLabel.style.alignSelf = "flex-end";
+            rightColumn.appendChild(priorityLabel);
+        }
+
+        container.appendChild(rightColumn);
+    }
+
+        // ----- FINAL TASK DIV -----
+        taskDiv.style.position = "relative";
+        taskDiv.appendChild(container);
 }
+
+
   
 
 function renderTasks(tasks = tasklist) {
@@ -185,40 +318,24 @@ function renderTasks(tasks = tasklist) {
 
     container.innerHTML = ""; // clear old output
 
-    const currentDatetime = new Date(); // get current date and time to check for overdue tasks
+    const currentDatetime = new Date(); // get current date and time to check for due tasks
 
     tasks.forEach(task => {
       const taskDiv = document.createElement("div");
       taskDiv.className = "task-card"; // optional for styling
-      taskDiv.style.border = "1px solid #ccc";
       taskDiv.style.padding = "8px";
       taskDiv.style.marginBottom = "8px";
 
       if (checkOverdue(task.dueDate, currentDatetime) && task.status === "open") {
-        taskDiv.style.backgroundColor = "#ffd8d8"; // red for overdue
+        taskDiv.style.backgroundColor = "#fed4d6"; // red for overdue
+        taskDiv.style.border = "2px solid #d6040b";
       } else {
         taskDiv.style.backgroundColor = (task.status === "closed") ? "#e5e0cb" : "#fff8df";
+        taskDiv.style.border = "1px solid #000";
       }
       
       renderTask(task, taskDiv); // Display Task Details
-
-      // Toggle Status Button
-      const toggleBtn = document.createElement("button");
-      toggleBtn.textContent = task.status === "open" ? "Mark Done" : "Reopen";
-      toggleBtn.onclick = () => {
-        updateStatus(task.dateCreated, task.status === "open" ? "closed" : "open");
-      };
   
-      // Delete Button
-      const deleteBtn = document.createElement("button");
-      deleteBtn.textContent = "Delete";
-      deleteBtn.style.marginLeft = "8px";
-      deleteBtn.onclick = () => {
-        deleteTask(task.dateCreated);
-      };
-  
-      taskDiv.appendChild(toggleBtn);
-      taskDiv.appendChild(deleteBtn);
       container.appendChild(taskDiv);
     });
 }
@@ -360,6 +477,7 @@ function countTags() {
 }
 
 function deleteTask(dateCreated) {
+    // I allow for multiple tasks with the same Title, so I use dateCreated to identify the task
     const newTasks = tasklist.filter(task => task.dateCreated !== dateCreated);
     tasklist = newTasks; 
     applyFiltersAndSort(); // Reapply filters and sorting
@@ -395,7 +513,7 @@ window.addEventListener("DOMContentLoaded", () => {
     loadTags();
     applyFiltersAndSort(); // or renderTasks()
     renderCustomTags();
-  });
+});
 
 //handles the form submission
 document.getElementById("addTaskForm").addEventListener("submit", (e) => {
@@ -403,6 +521,11 @@ document.getElementById("addTaskForm").addEventListener("submit", (e) => {
     e.preventDefault();
 
     const title = document.getElementById("title").value;
+    if (title.length > 48) { //if the title is too long, it messses up the layout
+        title = title.substring(0, 48) + "...";
+    }
+
+
     const dueDate = document.getElementById("dueDate").value;
     const priority = document.getElementById("priority").value;
     const notes = document.getElementById("notes").value;
