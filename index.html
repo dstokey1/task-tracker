@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+    <head>
+      <title>To Do List</title>
+      <link rel="icon" href="favicon.ico" type="image/x-icon" />
+      
+      <style>
+        html,
+        .banner {
+          margin: 0;
+          background-color: rgb(186, 150, 126);
+        }
+        .tagCheckbox {
+          display: flex;
+          align-items: center;
+          margin-bottom: 8px;
+          margin: 4px;
+          border-radius: 4px;
+          padding: 4px 8px;
+          background-color: #5aab76;
+        }
+
+        body {
+          margin: 0;
+          background-color: #a87f63;
+          font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+        }
+        #top {
+          background-color: #6d4a30;
+          padding-bottom: 8px;
+          margin-bottom: 8px;
+        }
+        #addTaskForm {
+          display: flex;
+          gap: 16px;
+          align-items: flex-start;
+          flex-wrap: wrap;
+          background-color: #3c8b58;
+          padding: 16px;
+          border-radius: 8px;
+          border-color: #fff0be;
+          border-width: 2px;
+          border-style: solid;
+          margin: 8px;
+        }
+        
+        #output {
+          margin: 16px;
+        }
+
+
+        
+      </style>
+
+    </head>
+
+    <body>
+
+    <div id="top">
+      <div class = banner style="margin: 0 auto;">
+        <div class = "banner-text" style="text-align: center">
+          <h1 style="color: #fff0be; font-family:Courier New;">To Do List:
+        </div>
+      </div>
+  
+      <!-- Form to add a pin -->
+      <form id="addTaskForm">
+    
+          <!-- Left column -->
+          <div style="flex: 1; min-width: 60%;">
+            <!-- Title and large Submit button -->
+            <input type="text" id="title" placeholder="Title (required)" style="width: 75%; margin-bottom: 8px; font-size: large" required />
+            <button type="submit" style="font-size: large; width: 15%;">Add Task </button>
+            <br />
+  
+            <!-- Due Date and Priority -->
+            <input type="datetime-local" id="dueDate" placeholder="Due Date" style="width: 60%; margin-bottom: 8px; font-size: large" />
+            <select id="priority" style="width: 30%; margin-bottom: 8px; font-size: large;">
+              <option value="">Priority</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+              </select>
+            <br />
+  
+            <!-- Checkboxes for tags -->
+            <fieldset style="max-width: 89%; padding: 8px; margin-bottom: 8px; border-color:#fff0be; border-radius: 6px;">
+              <legend style="color: #fff0be; ">Tags</legend>
+              <div style="display: flex; flex-wrap: wrap; gap: 8px;" id="tagOptions">
+
+                <!-- Add a new tag input and button -->
+                <div style="padding-top: 5px; align-items: center; max-width: 300px;">
+                  <input type="text" id="newTagInput" placeholder="" style="font-size: medium; max-width: 80%; "/>
+                  <button type="button" id="addTagBtn" style="margin-left: -2%; font-size: medium; ">Add</button>
+                </div>
+
+                <!-- Predefined tag checkboxes -->
+                <div class="tagCheckbox">
+                  <label><input type="checkbox" value="meeting" class="tag_option" /> Meeting</label>
+                </div>
+                <div class="tagCheckbox">
+                  <label><input type="checkbox" value="assignment" class="tag_option" /> Assignment</label>
+                </div>
+                <div class="tagCheckbox">
+                  <label><input type="checkbox" value="event" class="tag_option" /> Event</label>
+                </div>  
+                <div class="tagCheckbox">
+                  <label><input type="checkbox" value="chore" class="tag_option" /> Chore</label>
+                </div>
+                <div class="tagCheckbox">
+                  <label><input type="checkbox" value="virtual" class="tag_option" /> Virtual</label>
+                </div>
+              </div>
+  
+              <hr style="border-color: #fff0be;"/>
+  
+              <div style="display: flex; flex-wrap: wrap; gap: 8px;" id="customTagOptions"></div>
+              
+            </fieldset>
+        
+          </div>
+        
+          <!-- Right column (notes) -->
+          <div style="flex: 1; min-width: 30%">
+            <label></label><textarea id="notes" placeholder="Notes" rows="8" style="width: 90%; font-size: large; padding: auto;"></textarea></label>
+          </div>
+        
+        </form> 
+
+    </div>
+
+
+
+    <div id="controlPanel" style="margin-left: 8px; margin-right: 8px;">
+          <!-- dropdown to select a filter -->
+      <select id="filter">
+      <option value="">Select a filter</option>
+      <option value="all">All</option>
+      <option value="open">To Do</option>
+      <option value="closed">Done</option>
+      </select>
+  
+      <!-- dropdown to select a sort order -->
+      <select id="sortOrder">
+      <option value="">Sort by</option>
+      <option value="dueDate">Due Date</option>
+      <option value="priority">Priority</option>
+      <option value="newest">Newest</option>
+      <option value="title">Title</option>
+      </select>
+  
+      <!-- filter by tag -->
+      <button id="openTagModalBtn">Tag filters</button>
+  
+      <div id="tagModal" style="display: none; position: fixed; top: 20%; left: 50%; transform: translateX(-50%);
+        background: white; border: 2px solid #000000; padding: 16px; z-index: 1000;">
+        <strong>Select Tags</strong><br /><hr />
+        <div id="tagFilters">
+          <label><input type="checkbox" value="meeting" class="tag_filter" /> Meeting</label>
+          <label><input type="checkbox" value="assignment" class="tag_filter" /> Assignment</label>
+          <label><input type="checkbox" value="event" class="tag_filter" /> Event</label>
+          <label><input type="checkbox" value="chore" class="tag_filter" /> Chore</label>
+          <label><input type="checkbox" value="virtual" class="tag_filter" /> Virtual</label>
+        </div> 
+        <div id="customTagFilters"></div>
+        <hr /> 
+  
+        <button id="clearTagFiltersBtn">Clear</button>
+        <button id="closeTagModalBtn">Close</button>
+      </div>
+  
+      <!-- Button to clear all pins -->
+      <button id="clearTasksBtn">Clear All Tasks</button>
+    </div>
+
+
+    <!-- Output area -->
+    <pre id="output"></pre>
+
+    <script src="tasklogic.js"></script>
+    </body>
+</html>
