@@ -30,8 +30,10 @@ This app started as a passion project to learn the fundamentals of frontend web 
 ```
 Coming soon!
 
-![Task Tracker screenshot](./images/screenshot.png)
+
 ```
+![Screenshot](./images/DemoScreenshot.png)
+
 
 ## 🛠️ How to Use
 
@@ -59,6 +61,7 @@ task-tracker/
 
 ## 🐛 Known Issues / Roadmap
 
+- [ ] Seperate due dates and times for easier entry and more input options
 - [ ] Optional dark mode
 - [ ] Task editing
 - [ ] Mobile layout improvements

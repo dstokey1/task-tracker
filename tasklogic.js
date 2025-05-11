@@ -5,7 +5,7 @@ let customTags = []; //logs all custom tags
 
 let currentStatusFilter = "";
 let currentTagFilters = [];
-let currentSort = "newest"; // default sort order
+let currentSort = "dueDate"; // default sort order
 
 function saveTasks() {
     localStorage.setItem("tasks", JSON.stringify(tasklist));
@@ -54,6 +54,25 @@ function customDateString(dateStr){
     
     return `${datePart} at ${timePart}`;
     
+}
+
+function wrapText(text, maxLineLength) {
+    const words = text.split(" ");
+    let wrappedText = "";
+    let currentLine = "";
+
+    words.forEach((word) => {
+        if (currentLine.length + word.length + 1 <= maxLineLength) {
+            currentLine += (currentLine ? " " : "") + word;
+        } else {
+            wrappedText += (wrappedText ? "\n" : "") + currentLine;
+            currentLine = word;
+        }
+    });
+
+    wrappedText += (wrappedText ? "\n" : "") + currentLine;
+
+    return wrappedText;
 }
 
 function addTask(title, dueDate, priority, status = 'open', tags, notes = '') {
@@ -178,80 +197,192 @@ function renderDeleteButton(target, container, size = 20) {
     return deleteBtn;
 }
 
+function renderEditButton(task, taskContainer, size) {
+    const editBtn = document.createElement("button");
+    editBtn.style.background = "none";
+    editBtn.style.border = "none";
+    editBtn.style.cursor = "pointer";
+    editBtn.style.width = `${size}px`;
+    editBtn.style.height = `${size}px`;
+
+    const editIcon = document.createElement("img");
+    editIcon.src = "./images/edit.svg";
+    editIcon.style.width = "100%";
+    editIcon.style.height = "100%";
+    editIcon.style.opacity = "0.5";
+    editIcon.style.transition = "opacity .2s";
+    editIcon.onmouseover = () => editIcon.style.opacity = "1";
+    editIcon.onmouseout = () => editIcon.style.opacity = "0.5";
+    editBtn.appendChild(editIcon);
+
+    // open the edit notes modal
+    editBtn.addEventListener("click", () => {
+        const notesModal = document.getElementById("taskNotesEditModal");
+        notesModal.style.display = "block";
+        notesModal.style.height = "400px";
+        notesModal.style.width = "500px";
+        
+        const notesTextArea = document.getElementById("taskNotesTextArea");
+        notesTextArea.value = task.notes;
+        notesTextArea.style.width = "100%";
+        notesTextArea.style.height = "100%";
+        notesTextArea.style.borderRadius = "4px";
+        notesTextArea.style.padding = "8px";
+        notesTextArea.style.fontSize = "1em";
+        notesTextArea.style.resize = "none";
+
+        const saveBtn = document.getElementById("saveEditBtn");
+        saveBtn.onclick = () => {
+            task.notes = notesTextArea.value;
+            saveTasks();
+            applyFiltersAndSort();
+            notesModal.style.display = "none";
+        };
+
+        
+
+    });
+    taskContainer.appendChild(editBtn);
+    return editBtn;
+}
+
+
 
 function renderTask(task, taskDiv) {
-    const container = document.createElement("div"); // Horizontal layout
+    const container = document.createElement("div"); // for the horizontal layout
     container.style.display = "flex";
     container.style.flexWrap = "wrap";
-
-    // container.style.alignItems = "center"; // vertically center items
     container.style.fontSize = "large";
     container.style.gap = "16px";
-    container.style.lineHeight = "1.5"; // increased vertical spacing
+    container.style.lineHeight = "1.5"; 
 
     // ----- STATUS ICON COLUMN -----
     const statusColumn = document.createElement("div");
     statusColumn.style.flex = "0 0 auto";
     statusColumn.style.display = "flex";
-    // statusColumn.style.alignItems = "center";
     statusColumn.style.marginTop = "4px";
     statusColumn.style.paddingRight = "8px";
-    renderStatusButton(task, statusColumn); // icon goes here
+    renderStatusButton(task, statusColumn);
     container.appendChild(statusColumn);
 
     // ----- MAIN INFO COLUMN -----
     const mainInfo = document.createElement("div");
     mainInfo.style.flex = "2";
     mainInfo.style.padding = "8px";
-    mainInfo.style.lineHeight = "2"; // increased vertical spacing
+    mainInfo.style.lineHeight = "2";
+    mainInfo.style.maxWidth = "33%";
 
+        // Title
     const titleEl = document.createElement("strong");
-    titleEl.style.lineHeight = "2"; // slightly increased vertical spacing
-    titleEl.textContent = task.title;
+    titleEl.style.lineHeight = "2";
+    titleEl.textContent = (task.title.length > 48) ? wrapText(task.title, 48) : task.title;
     titleEl.style.marginBottom = "16px";
     mainInfo.appendChild(titleEl);
 
+        // Due Date
     if (task.dueDate) {
         const due = document.createElement("div");
         due.textContent = `${customDateString(task.dueDate)}`;
         mainInfo.appendChild(due);
     }
 
+        // Tags
     if (task.tags.length > 0) {
         const tagsLine = document.createElement("div");
         tagsLine.style.display = "flex";
         tagsLine.style.flexWrap = "wrap";
         tagsLine.style.alignItems = "flex-start";
         tagsLine.style.gap = "8px";
-        tagsLine.style.maxWidth = "100%";
         
         task.tags.forEach(tag => {
-            const tagEl = document.createElement("span");
+            const tagEl = document.createElement("span"); // span for inline display
             tagEl.textContent = tag;
             tagEl.style.lineHeight = "1"; 
             tagEl.style.display = "inline-flex";
             tagEl.style.alignItems = "center";
-
-            if (checkOverdue(task.dueDate, new Date()) && task.status === "open") {
-                tagEl.style.backgroundColor = "#fec4c8"; // red for overdue
-                tagEl.style.border = "1px solid #f99a85";
-            } else {
-                tagEl.style.backgroundColor = (task.status === "open") ? "#fdf1c5" : "#d4ceb4";
-                tagEl.style.border = (task.status === "open") ? "1px solid #e5d8a8" : "1px solid #c4bb96";
-            }
-
             tagEl.style.padding = "4px 8px";
             tagEl.style.borderRadius = "4px";
             tagEl.style.fontSize = "0.9em";
             tagEl.style.whiteSpace = "nowrap";
             tagEl.style.height = "fit-content";
-            tagsLine.appendChild(tagEl);
+
+            // Set background color and border based on status and overdue
+            if (checkOverdue(task.dueDate, new Date()) && task.status === "open") {
+                tagEl.style.backgroundColor = "#fec4c8"; 
+                tagEl.style.border = "1px solid #f99a85";
+            } else {
+                tagEl.style.backgroundColor = (task.status === "open") ? "#fdf1c5" : "#c5bea0";
+                tagEl.style.border = (task.status === "open") ? "1px solid #e5d8a8" : "1px solid #b1a780";
+            }
+            
+            tagsLine.appendChild(tagEl); // add the tag span to the line
         });
     
-        mainInfo.appendChild(tagsLine);
+        mainInfo.appendChild(tagsLine); // add the line of tags to the main info column
     }    
 
     container.appendChild(mainInfo);
+
+    // ----- RIGHT COLUMN: NOTES + PRIORITY -----
+    const rightColumn = document.createElement("div");
+    rightColumn.style.display = "flex";
+    rightColumn.style.flexDirection = "column";
+    rightColumn.style.flex = "1";
+    rightColumn.style.alignItems = "center";
+    rightColumn.style.marginRight = "32px";
+
+    if (!task.notes) {
+        // Add the edit button to the right column if the user has not added any notes
+        const notesEditBtn = renderEditButton(task, rightColumn, 24);
+        notesEditBtn.style.padding = "0px";
+        notesEditBtn.style.marginTop = "auto";
+        notesEditBtn.style.marginBottom = "auto";
+    }
+    
+    if (task.notes) {
+        // Inner wrapper to center notes
+        const notesWrapper = document.createElement("div");
+        notesWrapper.style.flex = "1";
+        notesWrapper.style.display = "flex";
+        notesWrapper.style.alignItems = "center"; 
+
+        //add an edit button to the left of the notes
+        const notesEditBtn = renderEditButton(task, notesWrapper, 24);
+        notesEditBtn.style.position = "relative";
+        notesEditBtn.style.padding = "0px";
+        notesEditBtn.style.marginRight = "8px";
+        notesEditBtn.style.marginLeft = "auto"; 
+
+        const notesBox = document.createElement("div");
+        notesBox.style.fontSize = "medium";
+        notesBox.style.padding = "8px";
+        notesBox.style.borderRadius = "8px";
+        notesBox.textContent = (task.notes.length > 85) ? wrapText(task.notes, 85) : task.notes;
+
+        if (checkOverdue(task.dueDate, new Date()) && task.status === "open") {
+            notesBox.style.backgroundColor = "#fde4df"; 
+            notesBox.style.border = "1px solid #f98369";
+        } else {
+            notesBox.style.backgroundColor = (task.status === "open") ? "#fffdf6" : "#dedcd6";
+            notesBox.style.border = "1px solid #ccc";
+        }
+
+        notesWrapper.appendChild(notesBox);
+        rightColumn.appendChild(notesWrapper);
+    }
+
+    if (task.priority) {
+        const priorityLabel = document.createElement("div");
+        priorityLabel.textContent = `Priority: ${task.priority}`;
+        priorityLabel.style.fontSize = "0.9em";
+        priorityLabel.style.color = "#666";
+        priorityLabel.style.marginTop = "auto"; 
+        priorityLabel.style.marginLeft = "auto";
+        priorityLabel.style.alignSelf = "flex-end";
+        rightColumn.appendChild(priorityLabel);
+    }
+
+    container.appendChild(rightColumn);
 
     // ----- DELETE BUTTON -----
     const deleteBtn = renderDeleteButton(task, taskDiv, 20);
@@ -260,53 +391,8 @@ function renderTask(task, taskDiv) {
     deleteBtn.style.right = "8px";
     deleteBtn.style.padding = "0px";
 
-    // ----- RIGHT COLUMN: NOTES + PRIORITY -----
-    if (task.notes || task.priority) {
-        const rightColumn = document.createElement("div");
-        rightColumn.style.display = "flex";
-        rightColumn.style.flexDirection = "column";
-        rightColumn.style.flex = "1";
-        rightColumn.style.gap = "8px";
-        rightColumn.style.marginRight = "32px";
-
-        if (task.notes) {
-            const notesBox = document.createElement("div");
-            notesBox.style.fontSize = "medium";
-
-            if (checkOverdue(task.dueDate, new Date()) && task.status === "open") {
-                notesBox.style.backgroundColor = "#fde4df"; // red for overdue
-                notesBox.style.border = "1px solid #f98369";
-            } else {
-                notesBox.style.backgroundColor = (task.status === "open") ? "#fffdf6" : "#dedcd6";
-                notesBox.style.border = "1px solid #ccc";
-            }
-            notesBox.style.padding = "8px";
-            notesBox.style.borderRadius = "8px";
-            notesBox.textContent = task.notes;
-            rightColumn.appendChild(notesBox);
-        }
-
-        if (task.priority) {
-            const priorityLabel = document.createElement("div");
-            priorityLabel.textContent = `Priority: ${task.priority}`;
-            priorityLabel.style.fontSize = "0.9em";
-            priorityLabel.style.color = "#666";
-            priorityLabel.style.marginTop = "auto";
-            priorityLabel.style.marginLeft = "auto";
-            priorityLabel.style.alignSelf = "flex-end";
-            rightColumn.appendChild(priorityLabel);
-        }
-
-        container.appendChild(rightColumn);
-    }
-
-        // ----- FINAL TASK DIV -----
-        taskDiv.style.position = "relative";
-        taskDiv.appendChild(container);
+    taskDiv.appendChild(container);
 }
-
-
-  
 
 function renderTasks(tasks = tasklist) {
     const container = document.getElementById("output");
@@ -316,25 +402,27 @@ function renderTasks(tasks = tasklist) {
         return;
     }
 
-    container.innerHTML = ""; // clear old output
+    container.innerHTML = ""; 
 
-    const currentDatetime = new Date(); // get current date and time to check for due tasks
+    const currentDatetime = new Date(); 
 
     tasks.forEach(task => {
       const taskDiv = document.createElement("div");
-      taskDiv.className = "task-card"; // optional for styling
       taskDiv.style.padding = "8px";
       taskDiv.style.marginBottom = "8px";
+      taskDiv.style.position = "relative";
 
+
+      // adjust the background color and border based on status and overdue
       if (checkOverdue(task.dueDate, currentDatetime) && task.status === "open") {
-        taskDiv.style.backgroundColor = "#fed4d6"; // red for overdue
+        taskDiv.style.backgroundColor = "#fed4d6";
         taskDiv.style.border = "2px solid #d6040b";
       } else {
-        taskDiv.style.backgroundColor = (task.status === "closed") ? "#e5e0cb" : "#fff8df";
+        taskDiv.style.backgroundColor = (task.status === "closed") ? "#cec8b3" : "#fff8df";
         taskDiv.style.border = "1px solid #000";
       }
       
-      renderTask(task, taskDiv); // Display Task Details
+      renderTask(task, taskDiv); // display Task details
   
       container.appendChild(taskDiv);
     });
@@ -342,13 +430,14 @@ function renderTasks(tasks = tasklist) {
 
 function renderDefaultTagFilters() {
     const defaultTagFilters = document.getElementById("tagFilters");
-    defaultTagFilters.innerHTML = ""; // Clear existing options
+    defaultTagFilters.innerHTML = ""; 
     const defaultTags = ["meeting", "assignment", "event", "chore", "virtual"];
     defaultTags.forEach(tag => {
         const tagOption = document.createElement("div");
         tagOption.style.display = "inline-flex";
         tagOption.style.marginRight = "8px";
         tagOption.style.alignItems = "center";
+
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox";
         checkbox.value = tag;
@@ -362,6 +451,7 @@ function renderDefaultTagFilters() {
             }
             applyFiltersAndSort();
         });
+
         const label = document.createElement("label");
         label.textContent = ` ${tag}`;
         label.prepend(checkbox);
@@ -375,9 +465,8 @@ function renderTagFilters() {
 
     renderDefaultTagFilters();
 
-
     const tagFilterOptions = document.getElementById("customTagFilters");
-    tagFilterOptions.innerHTML = ""; // Clear existing options
+    tagFilterOptions.innerHTML = ""; 
     customTags.forEach(tag => {
         const tagOption = document.createElement("div");
         tagOption.style.display = "inline-flex";
@@ -417,9 +506,9 @@ function updateStatus(dateCreated, newStatus) {
         return task;
     }
     );
-    tasklist = newTasks; // Update the tasklist with the new array
-    applyFiltersAndSort(); // Reapply filters and sorting
-    saveTasks(); // Save the updated tasklist to local storage
+    tasklist = newTasks; 
+    applyFiltersAndSort(); 
+    saveTasks(); 
     return newTasks;
 }
     
@@ -440,18 +529,18 @@ function sortTasks(criteria, tasks = tasklist) {
     const priorityOrder = {"": 0, "low": 1, "medium": 2, "high": 3};
     
     const sortedTasks = [...tasks].sort((a, b) => {
-        if (criteria === "dueDate") {
+        if (criteria === "newest") {
             //if the date is empty, we want to put it at the end of the list
-            if (!a.dueDate && !b.dueDate) return 0;
-            if (!a.dueDate) return 1;
-            if (!b.dueDate) return -1;
-            return new Date(a.dueDate) - new Date(b.dueDate);
+            return b.dateCreated - a.dateCreated; // default to dateCreated
         } else if (criteria === "priority") {
             return priorityOrder[b.priority] - priorityOrder[a.priority];
         } else if (criteria === "title") {
             return a.title.localeCompare(b.title);
         } else {
-            return b.dateCreated - a.dateCreated; // default to dateCreated
+            if (!a.dueDate && !b.dueDate) return 0;
+            if (!a.dueDate) return 1;
+            if (!b.dueDate) return -1;
+            return new Date(a.dueDate) - new Date(b.dueDate);
         }
     });
 
@@ -480,7 +569,7 @@ function deleteTask(dateCreated) {
     // I allow for multiple tasks with the same Title, so I use dateCreated to identify the task
     const newTasks = tasklist.filter(task => task.dateCreated !== dateCreated);
     tasklist = newTasks; 
-    applyFiltersAndSort(); // Reapply filters and sorting
+    applyFiltersAndSort(); 
     saveTasks(); 
     return newTasks;
 }
@@ -511,7 +600,7 @@ function clearTasks() {
 window.addEventListener("DOMContentLoaded", () => {
     loadTasks();
     loadTags();
-    applyFiltersAndSort(); // or renderTasks()
+    applyFiltersAndSort();
     renderCustomTags();
 });
 
@@ -521,14 +610,10 @@ document.getElementById("addTaskForm").addEventListener("submit", (e) => {
     e.preventDefault();
 
     const title = document.getElementById("title").value;
-    if (title.length > 48) { //if the title is too long, it messses up the layout
-        title = title.substring(0, 48) + "...";
-    }
-
-
     const dueDate = document.getElementById("dueDate").value;
     const priority = document.getElementById("priority").value;
     const notes = document.getElementById("notes").value;
+
     const tags = Array.from(document.querySelectorAll("input.tag_option:checked")).map(tag => tag.value);
   
     addTask(title, dueDate, priority, 'open', tags, notes);
@@ -545,7 +630,7 @@ document.getElementById("addTagBtn").addEventListener("click", () => {
     if (tagValue && !customTags.includes(tagValue)) {
         addTag(tagValue);
         renderCustomTags();
-        tagInput.value = ""; // Clear the input field
+        tagInput.value = ""; 
     }
 });
 
@@ -589,4 +674,8 @@ document.getElementById("clearTagFiltersBtn").addEventListener("click", () => {
     applyFiltersAndSort();
     renderTagFilters();
 });
-  
+
+//handles the cancel button in the notes modal
+document.getElementById("cancelEditBtn").addEventListener("click", () => {
+    document.getElementById("taskNotesEditModal").style.display = "none";
+});
