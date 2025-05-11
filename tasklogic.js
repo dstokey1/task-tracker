@@ -1,20 +1,29 @@
-// logic for a task management system
+/**
+ * Task Tracker Logic:
+ * This script handles the logic for a task tracker application. It includes functions to add, delete, and update tasks, as well as to filter and sort them based on various criteria.
+ * The script also manages custom tags and their rendering in the UI. It uses local storage to persist tasks and tags across sessions.
+ * 
+ * Created by Daniel Stokes
+ * May 2025
+ */
 
 let tasklist = []; //logs all tasks
 let customTags = []; //logs all custom tags
-
 let currentStatusFilter = "";
 let currentTagFilters = [];
 let currentSort = "dueDate"; // default sort order
 
+/** Saves tasks to local storage */
 function saveTasks() {
     localStorage.setItem("tasks", JSON.stringify(tasklist));
 }
 
+/** Saves custom tags to local storage */
 function saveTags() {
     localStorage.setItem("tags", JSON.stringify(customTags));
 }
 
+/** Loads tasks from local storage */
 function loadTasks() {
     const saved = localStorage.getItem("tasks");
     if (saved) {
@@ -22,6 +31,7 @@ function loadTasks() {
     }
 }
 
+/** Loads custom tags from local storage */
 function loadTags() {
     const saved = localStorage.getItem("tags");
     if (saved) {
@@ -29,12 +39,21 @@ function loadTags() {
     }
 }
 
+/** Checks if a task is overdue 
+ * @param {string} dueDate The due date of the task
+ * @param {Date} currentDatetime The current date and time
+ * @return {boolean} Returns true if the task is overdue, false otherwise
+*/
 function checkOverdue(dueDate, currentDatetime) {
     if (!dueDate) return false; // No due date means not overdue
     const due = new Date(dueDate);
     return due < currentDatetime; 
 }
 
+/** Formats a date string into a custom format
+ * @param {string} dateStr The date string to format
+ * @return {string} The formatted date string
+ */
 function customDateString(dateStr){
     
     const date = new Date(dateStr);
@@ -53,9 +72,13 @@ function customDateString(dateStr){
     }); // "9:30 PM"
     
     return `${datePart} at ${timePart}`;
-    
 }
 
+/** Wraps text to a specified line length for horizontal layout control
+ * @param {string} text The text to wrap
+ * @param {number} maxLineLength The maximum line length
+ * @return {string} The wrapped text
+ */
 function wrapText(text, maxLineLength) {
     const words = text.split(" ");
     let wrappedText = "";
@@ -71,10 +94,18 @@ function wrapText(text, maxLineLength) {
     });
 
     wrappedText += (wrappedText ? "\n" : "") + currentLine;
-
     return wrappedText;
 }
 
+/** Adds a new task to the task list
+ * @param {string} title The title of the task
+ * @param {string} dueDate The due date of the task
+ * @param {string} priority The priority of the task
+ * @param {string} status The status of the task (default is 'open')
+ * @param {Array} tags The tags associated with the task
+ * @param {string} notes The notes associated with the task (default is empty string)
+ * @return {Object} The newly created task object
+ */
 function addTask(title, dueDate, priority, status = 'open', tags, notes = '') {
 
     const newTask = {
@@ -91,14 +122,23 @@ function addTask(title, dueDate, priority, status = 'open', tags, notes = '') {
     return newTask;
 }
 
+/** Adds a custom tag to the list of tags
+ * @param {string} tag The custom tag to add
+ * @return {string} The added tag
+ */
 function addTag(tag) {
     if (!customTags.includes(tag)) {
         customTags.push(tag);
         saveTags();
     }
-    return customTags;
+    return tag;
 }
 
+/** Renders a custom tag in the form submission area    
+ * @param {string} tag The custom tag to render
+ * @param {HTMLElement} tagContainer The container element to render the tag in
+ * @return {HTMLElement} The rendered tag element
+ */
 function renderCustomTag(tag, tagContainer) {
     const wrapper = document.createElement("div");
     wrapper.className = "tagCheckbox";
@@ -125,17 +165,24 @@ function renderCustomTag(tag, tagContainer) {
     deleteBtn.style.marginLeft = "8px";
 
     tagContainer.appendChild(wrapper);
+    return wrapper;
 }
 
+/** Renders all custom tags in the form submission area */
 function renderCustomTags() {
     const tagContainer = document.getElementById("customTagOptions");
     tagContainer.innerHTML = ""; // Clear existing tags
     customTags.forEach(tag => {
         renderCustomTag(tag, tagContainer);
     });
-    return customTags;
+    return;
 }
 
+/** Renders and handles the status button for a task
+ * @param {Object} task The task object
+ * @param {HTMLElement} taskContainer The container element to render the button in
+ * @return {HTMLElement} The rendered status button element
+ */
 function renderStatusButton(task, taskContainer) {
     const statusBtn = document.createElement("button");
     statusBtn.style.background = "none";
@@ -151,23 +198,28 @@ function renderStatusButton(task, taskContainer) {
 
     statusBtn.appendChild(statusIcon);
 
+    // handle the status button click, toggles between open and closed
     statusBtn.onclick = () => {
         const newStatus = task.status === "open" ? "closed" : "open";
         updateStatus(task.dateCreated, newStatus);
         applyFiltersAndSort(); // re-renders all task cards
     };
 
-    statusBtn.onmouseover = () => {
-        statusIcon.style.opacity = "0.5";
-    };
-    statusBtn.onmouseout = () => {
-        statusIcon.style.opacity = "1";
-    };
+    statusIcon.style.opacity = "1";
+    statusIcon.style.transition = "opacity .2s";
+    statusBtn.onmouseover = () => statusIcon.style.opacity = "0.5";
+    statusBtn.onmouseout = () => statusIcon.style.opacity = "1";
 
     taskContainer.appendChild(statusBtn);
     return statusBtn;
 }
 
+/** Renders and handles the delete button for a task or custom tag
+ * @param {Object|string} target The task object or custom tag to delete
+ * @param {HTMLElement} container The container element to render the button in
+ * @param {number} size The size of the button in px (default is 20)
+ * @return {HTMLElement} The rendered delete button element
+ */
 function renderDeleteButton(target, container, size = 20) {
     const deleteBtn = document.createElement("button");
     deleteBtn.style.background = "none";
@@ -187,9 +239,9 @@ function renderDeleteButton(target, container, size = 20) {
 
     deleteBtn.appendChild(deleteIcon);
 
-    if (typeof target === "object" && target.dateCreated) {
+    if (typeof target === "object" && target.dateCreated) { // task object
         deleteBtn.onclick = () => deleteTask(target.dateCreated);
-    } else {
+    } else { // custom tag
         deleteBtn.onclick = () => deleteTag(target);
     }
 
@@ -197,6 +249,12 @@ function renderDeleteButton(target, container, size = 20) {
     return deleteBtn;
 }
 
+/** Renders and handles the edit button for a task's notes
+ * @param {Object} task The task object
+ * @param {HTMLElement} taskContainer The container element to render the button in
+ * @param {number} size The size of the button in px (default is 24)
+ * @return {HTMLElement} The rendered edit button element
+ */
 function renderEditButton(task, taskContainer, size) {
     const editBtn = document.createElement("button");
     editBtn.style.background = "none";
@@ -215,7 +273,7 @@ function renderEditButton(task, taskContainer, size) {
     editIcon.onmouseout = () => editIcon.style.opacity = "0.5";
     editBtn.appendChild(editIcon);
 
-    // open the edit notes modal
+    // handle the edit button click, opens the edit notes modal
     editBtn.addEventListener("click", () => {
         const notesModal = document.getElementById("taskNotesEditModal");
         notesModal.style.display = "block";
@@ -232,22 +290,25 @@ function renderEditButton(task, taskContainer, size) {
         notesTextArea.style.resize = "none";
 
         const saveBtn = document.getElementById("saveEditBtn");
+
+        // handle the save button click
         saveBtn.onclick = () => {
             task.notes = notesTextArea.value;
             saveTasks();
             applyFiltersAndSort();
             notesModal.style.display = "none";
         };
-
-        
-
     });
+
     taskContainer.appendChild(editBtn);
     return editBtn;
 }
 
-
-
+/** Renders a task in the UI
+ * @param {Object} task The task object to render
+ * @param {HTMLElement} taskDiv The container element to render the task in
+ * @return {void}
+ */
 function renderTask(task, taskDiv) {
     const container = document.createElement("div"); // for the horizontal layout
     container.style.display = "flex";
@@ -293,7 +354,7 @@ function renderTask(task, taskDiv) {
         tagsLine.style.flexWrap = "wrap";
         tagsLine.style.alignItems = "flex-start";
         tagsLine.style.gap = "8px";
-        
+    
         task.tags.forEach(tag => {
             const tagEl = document.createElement("span"); // span for inline display
             tagEl.textContent = tag;
@@ -346,19 +407,21 @@ function renderTask(task, taskDiv) {
         notesWrapper.style.display = "flex";
         notesWrapper.style.alignItems = "center"; 
 
-        //add an edit button to the left of the notes
+        // Add the edit button to the left of the notes
         const notesEditBtn = renderEditButton(task, notesWrapper, 24);
         notesEditBtn.style.position = "relative";
         notesEditBtn.style.padding = "0px";
         notesEditBtn.style.marginRight = "8px";
         notesEditBtn.style.marginLeft = "auto"; 
 
+        // Create a box for the notes
         const notesBox = document.createElement("div");
         notesBox.style.fontSize = "medium";
         notesBox.style.padding = "8px";
         notesBox.style.borderRadius = "8px";
         notesBox.textContent = (task.notes.length > 85) ? wrapText(task.notes, 85) : task.notes;
 
+        // Set background color and border based on status and overdue
         if (checkOverdue(task.dueDate, new Date()) && task.status === "open") {
             notesBox.style.backgroundColor = "#fde4df"; 
             notesBox.style.border = "1px solid #f98369";
@@ -392,8 +455,13 @@ function renderTask(task, taskDiv) {
     deleteBtn.style.padding = "0px";
 
     taskDiv.appendChild(container);
+    return;
 }
 
+/** Renders all tasks in an array of tasks
+ * @param {Array} tasks The list of tasks to render (default is the entire task list)
+ * @return {void}
+ * */
 function renderTasks(tasks = tasklist) {
     const container = document.getElementById("output");
 
@@ -426,8 +494,13 @@ function renderTasks(tasks = tasklist) {
   
       container.appendChild(taskDiv);
     });
+
+    return;
 }
 
+/** Renders the default tag filters in the modal
+ * @returns {Array} The default tags
+ */
 function renderDefaultTagFilters() {
     const defaultTagFilters = document.getElementById("tagFilters");
     defaultTagFilters.innerHTML = ""; 
@@ -458,10 +531,14 @@ function renderDefaultTagFilters() {
         tagOption.appendChild(label);
         defaultTagFilters.appendChild(tagOption);
     });
+
     return defaultTags;
 }
 
-function renderTagFilters() {
+/** Renders all tag filters in the modal
+ * @returns {Array} The custom tags
+ */
+function renderTagFilters() { 
 
     renderDefaultTagFilters();
 
@@ -479,6 +556,7 @@ function renderTagFilters() {
         
         checkbox.checked = currentTagFilters.includes(tag);
 
+        // handle the checkbox change event, adds or removes the tag from the currentTagFilters array
         checkbox.addEventListener("change", (e) => {
             if (e.target.checked) {
                 currentTagFilters.push(tag);
@@ -497,10 +575,15 @@ function renderTagFilters() {
     return customTags;
 }
   
-
+/** Updates the status of a task
+ * @param {string} dateCreated The date the task was created
+ * @param {string} newStatus The new status of the task
+ * @return {Array} The updated task list
+ */
 function updateStatus(dateCreated, newStatus) {
     const newTasks = tasklist.map(task => {
-        if (task.dateCreated === dateCreated) {
+        // I allow for multiple tasks with the same Title, so I use dateCreated as a more unique identifier
+        if (task.dateCreated === dateCreated) { 
             return { ...task, status: newStatus };
         }
         return task;
@@ -512,31 +595,43 @@ function updateStatus(dateCreated, newStatus) {
     return newTasks;
 }
     
+/** Applies the status filter to the task list
+    * @param {Array} tasks The list of tasks to filter (default is the entire task list)
+    * @param {string} status The status to filter by (default is the current status filter)
+    * @return {Array} The filtered task list
+    */    
 function filterByStatus(tasks = tasklist, status = currentStatusFilter) {
     return [...tasks].filter(task => task.status === status);
 }
 
-// Filter tasks by selected tags. only returns tasks that have all the selected tags
+/** Applies the tag filters to the task list
+ * @param {Array} tasks The list of tasks to filter (default is the entire task list)
+ * @param {Array} tagFilters The tags to filter by (default is the current tag filters)
+ * @return {Array} The filtered task list
+ */
 function filterByTags(tasks = tasklist, tagFilters = currentTagFilters) {
     if (tagFilters.length === 0) return tasks; // No tags selected, return all tasks
     return [...tasks].filter(task => tagFilters.every(tag => task.tags.includes(tag)));
 }
 
-
-
+/** Sorts the task list based on the specified criteria
+ * @param {string} criteria The criteria to sort by (defaults to dueDate)
+ * @param {Array} tasks The list of tasks to sort (default is the entire task list)
+ * @return {Array} The sorted task list
+ */
 function sortTasks(criteria, tasks = tasklist) {
 
     const priorityOrder = {"": 0, "low": 1, "medium": 2, "high": 3};
     
     const sortedTasks = [...tasks].sort((a, b) => {
         if (criteria === "newest") {
-            //if the date is empty, we want to put it at the end of the list
             return b.dateCreated - a.dateCreated; // default to dateCreated
         } else if (criteria === "priority") {
             return priorityOrder[b.priority] - priorityOrder[a.priority];
         } else if (criteria === "title") {
             return a.title.localeCompare(b.title);
         } else {
+            // Default to sorting by dueDate
             if (!a.dueDate && !b.dueDate) return 0;
             if (!a.dueDate) return 1;
             if (!b.dueDate) return -1;
@@ -547,6 +642,9 @@ function sortTasks(criteria, tasks = tasklist) {
     return sortedTasks;
 }
 
+/** Applies all filters and sorting to the task list, then renders the tasks
+ * @returns {Array} The filtered and sorted task list
+ */
 function applyFiltersAndSort() {
     let filtered = (currentStatusFilter === "open" || currentStatusFilter === "closed") ? filterByStatus(tasklist, currentStatusFilter) : tasklist;
     filtered = filterByTags(filtered, currentTagFilters);
@@ -555,7 +653,9 @@ function applyFiltersAndSort() {
     return sorted;
 }
   
-
+/** Counts the number of tasks for each tag (not used in the current version)
+ * @returns {Object} An object with tag counts
+ */
 function countTags() {
     return tasklist.reduce((counts, task) => {
         task.tags.forEach(tag => {
@@ -565,15 +665,23 @@ function countTags() {
     }, {});
 }
 
+/** Deletes a task from the task list, saves the updated list, and re-renders the tasks
+ * @param {string} dateCreated The date the task was created
+ * @return {Array} The updated task list
+ */
 function deleteTask(dateCreated) {
-    // I allow for multiple tasks with the same Title, so I use dateCreated to identify the task
+    // I allow for multiple tasks with the same Title, so I use dateCreated as a more unique identifier
     const newTasks = tasklist.filter(task => task.dateCreated !== dateCreated);
     tasklist = newTasks; 
-    applyFiltersAndSort(); 
     saveTasks(); 
+    applyFiltersAndSort(); 
     return newTasks;
 }
 
+/** Deletes a custom tag from the list of tags, saves the updated list, and re-renders the tags
+ * @param {string} tag The custom tag to delete
+ * @return {Array} The updated list of custom tags
+ */
 function deleteTag(tag) {
     customTags = customTags.filter(t => t !== tag);
     saveTags();
@@ -581,19 +689,21 @@ function deleteTag(tag) {
     return customTags;
 }
 
+/** Clears all tasks from the task list, resets filters and sorting, and re-renders the tasks
+ * @returns {Array} The cleared task list
+ */
 function clearTasks() {
     tasklist = [];
     currentStatusFilter = "";
     currentTagFilters = [];
-    currentSort = "newest";
+    currentSort = "dueDate";
     document.getElementById("filter").value = "";
-    document.getElementById("tagFilters").innerHTML = ""; // Clear tag filters
+    document.getElementById("tagFilters").innerHTML = "";
     document.getElementById("sortOrder").value = "";
-    renderTasks();
     saveTasks();
+    renderTasks();
     return tasklist;
 }
-
 
 
 // DOM handlers // 
@@ -679,3 +789,5 @@ document.getElementById("clearTagFiltersBtn").addEventListener("click", () => {
 document.getElementById("cancelEditBtn").addEventListener("click", () => {
     document.getElementById("taskNotesEditModal").style.display = "none";
 });
+
+//save note edits button handled in renderEditButton()

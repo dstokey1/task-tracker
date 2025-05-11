@@ -27,11 +27,6 @@ This app started as a passion project to learn the fundamentals of frontend web 
 
 ## 📷 Screenshots
 
-```
-Coming soon!
-
-
-```
 ![Screenshot](./images/DemoScreenshot.png)
 
 

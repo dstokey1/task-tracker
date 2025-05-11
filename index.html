@@ -62,7 +62,7 @@
         </div>
       </div>
   
-      <!-- Form to add a pin -->
+      <!-- Form to add a task -->
       <form id="addTaskForm">
     
           <!-- Left column -->
@@ -177,11 +177,12 @@
     <!-- Output area -->
     <pre id="output"></pre>
 
+    <!-- Edit modal for task notes -->
     <div id="taskNotesEditModal" style="display: none; position: fixed; top: 20%; left: 50%; transform: translateX(-50%);
         background: none; border: none; padding: 16px; z-index: 1000;">
         <button id="saveEditBtn">Save and Close</button>
         <button id="cancelEditBtn">Cancel</button>
-        <textarea id="taskNotesTextArea" placeholder = ""></textarea>
+        <textarea id="taskNotesTextArea" placeholder = "Add notes"></textarea>
 
     <script src="tasklogic.js"></script>
     </body>
